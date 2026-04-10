@@ -677,7 +677,6 @@ function updateGlobalCostBar() {
       ${s.web_calls ? `<span class="gcb-sep">·</span><span class="gcb-label">🌐 ${s.web_calls} web</span>` : ''}
       ${s.web_cache_hits ? `<span class="gcb-sep">·</span><span class="gcb-label">⚡ ${s.web_cache_hits}× cache</span>` : ''}
       ${limitHtml}
-      <button class="gcb-settings-btn" onclick="openCostSettings()" title="Nastaviť limit">⚙️</button>
     </div>
   `;
 }
