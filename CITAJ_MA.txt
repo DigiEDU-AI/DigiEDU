@@ -1,0 +1,21 @@
+DigiEDU AI Assistant v3 – Cloud Edition
+========================================
+Spustenie:  Windows → spusti_ma.bat
+            Mac/Linux → spusti_ma.sh
+
+NOVÉ v v3:
+  ☁️ Cloud-First: záznamy sa ukladajú na Google Drive (MAIN_KB.json)
+  🔄 Automatický sync pri každom štarte
+  ⚠️ Offline mode: pracuje lokálne, pri ďalšom štarte doženie
+  🔒 Admin: heslo chránené SHA-256 hashom
+
+Workflow:
+  1. Aplikácia sa spustí → načíta lokálnu cache
+  2. Na pozadí stiahne nové dáta z Drive (zelená bodka = sync OK)
+  3. Uzavretý prípad → uloží lokálne + odošle na Drive
+  4. Oranžová bodka = záznamy čakajú na sync
+
+Admin (⚙️):
+  - Nastavenia modelu, nákladov, KB váh, API kľúča
+  - Export MAIN_KB.json (lokálna záloha + editácia)
+  - Manuálny cloud sync

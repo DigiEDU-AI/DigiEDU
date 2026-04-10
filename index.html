@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DigiEDU AI Service Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ── Loading Overlay ────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg">Spracovávam...</div>
+</div>
+
+<!-- ── Toast Container ────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: HOME
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen">
+
+  <!-- Navbar -->
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <div class="app-logo-icon">🤖<span id="cloud-sync-dot" class="cloud-sync-dot offline" title="Offline"></span></div>
+      <div>
+        <div class="app-logo-text">DigiEDU AI</div>
+        <div class="app-logo-sub">Service Assistant</div>
+      </div>
+    </div>
+    <div class="nav-actions"><span id="pending-sync-badge" class="pending-badge" style="display:none"></span><button class="btn btn-ghost btn-sm" id="btn-manual-sync" title="Manuálny cloud sync">🔄</button>
+      <div class="model-switcher">
+        <button class="model-btn" data-model="sonnet" onclick="setModel('sonnet',this)">Sonnet</button>
+        <button class="model-btn active" data-model="haiku" onclick="setModel('haiku',this)">Haiku ⚡</button>
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btn-search-kb">🔍 Hľadať v KB</button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="home-main">
+    <div class="home-title">
+      <h1>Vyberte kategóriu problému</h1>
+      <p>Kliknite na kategóriu a začnite diagnostiku s AI asistentom</p>
+    </div>
+
+    <!-- Kategóriové karty -->
+    <div class="category-grid">
+      <div class="category-card" data-cat="HW">
+        <span class="cat-icon">🖥️</span>
+        <div class="cat-name">HW Problém</div>
+      </div>
+      <div class="category-card" data-cat="365">
+        <span class="cat-icon">☁️</span>
+        <div class="cat-name">365 Problém</div>
+      </div>
+      <div class="category-card" data-cat="WIFI">
+        <span class="cat-icon">📡</span>
+        <div class="cat-name">WIFI Problém</div>
+      </div>
+      <div class="category-card" data-cat="ADMIN">
+        <span class="cat-icon">📋</span>
+        <div class="cat-name">Administratívny Problém</div>
+      </div>
+      <div class="category-card" data-cat="OTHER">
+        <span class="cat-icon">❓</span>
+        <div class="cat-name">Iný problém</div>
+      </div>
+    </div>
+
+    <!-- Počítadlá -->
+    <div class="counters-bar">
+      <div class="counter-item" title="HW Knowledge Base">
+        <div class="counter-cat">HW</div>
+        <div class="counter-total" id="counter-total-HW">0</div>
+        <div class="counter-new" id="counter-new-HW">0 nových</div>
+      </div>
+      <div class="counter-item" title="Microsoft 365 Knowledge Base">
+        <div class="counter-cat">365</div>
+        <div class="counter-total" id="counter-total-365">0</div>
+        <div class="counter-new" id="counter-new-365">0 nových</div>
+      </div>
+      <div class="counter-item" title="WIFI Knowledge Base">
+        <div class="counter-cat">WIFI</div>
+        <div class="counter-total" id="counter-total-WIFI">0</div>
+        <div class="counter-new" id="counter-new-WIFI">0 nových</div>
+      </div>
+      <div class="counter-item" title="Admin Knowledge Base">
+        <div class="counter-cat">ADMIN</div>
+        <div class="counter-total" id="counter-total-ADMIN">0</div>
+        <div class="counter-new" id="counter-new-ADMIN">0 nových</div>
+      </div>
+      <div class="counter-item" title="Other Knowledge Base">
+        <div class="counter-cat">OTHER</div>
+        <div class="counter-total" id="counter-total-OTHER">0</div>
+        <div class="counter-new" id="counter-new-OTHER">0 nových</div>
+      </div>
+    </div>
+
+    <div class="extra-status" id="counter-extra">0 EXTRA záznamov</div>
+    <div class="extra-status web-kb-status" id="counter-web-kb" style="display:none">0 WEB záznamov</div>
+  </div>
+
+  <!-- Bottom actions -->
+  <div class="home-bottom-actions">
+    <button class="btn btn-secondary" id="btn-import-kb">📥 Import KB</button>
+    <button class="btn btn-secondary" id="btn-export-kb">💾 Záloha ZIP</button>
+    <button class="btn btn-ghost" id="btn-admin" style="margin-left:auto;">⚙️ Admin</button>
+  </div>
+</div><!-- /screen-home -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: CASE FORM
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-case" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <button class="btn btn-ghost btn-sm btn-back" data-target="screen-home">← Späť</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="model-indicator" id="model-indicator-case"></span>
+      <span id="case-category-label" style="font-weight:700;font-size:15px;"></span>
+      <span class="case-id-badge" id="case-id-display"></span>
+    </div>
+  </nav>
+
+  <div class="screen-content">
+
+    <!-- HW Sekcia – zariadenie -->
+    <div id="hw-section" class="form-section" style="display:none">
+      <h3>🖥️ Zariadenie</h3>
+      <label for="device-select">Vyberte zariadenie z katalógu DigiEDU</label>
+      <select id="device-select">
+        <option value="">-- Vyberte zariadenie --</option>
+      </select>
+      <div id="device-info-box" class="device-info-box hidden"></div>
+    </div>
+
+    <!-- Popis problému -->
+    <div class="form-section">
+      <h3>📝 Popis problému</h3>
+      <label for="problem-text">Popíšte problém čo najpresnejšie</label>
+      <textarea id="problem-text" class="large" placeholder="Príklad: Po aktualizácii Windows sa zariadenie nepripojí na WiFi. Zobrazuje sa chyba &quot;Can't connect to this network&quot;. Pokus o zabudnutie siete nepomohol..."></textarea>
+    </div>
+
+    <!-- Tlačidlá -->
+    <div class="form-actions">
+      <button class="btn btn-primary btn-lg" id="btn-round1">🤖 Identifikuj problém a nájdi riešenie</button>
+      <button class="btn btn-secondary" id="btn-close-case-form">📋 Ukončiť CASE a vygenerovať KB</button>
+    </div>
+
+  </div>
+</div><!-- /screen-case -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: ROUND 1 – AI Output
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-round1" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <button class="btn btn-ghost btn-sm btn-back" data-target="screen-case">← Späť</button>
+    </div>
+    <span class="model-indicator" id="model-indicator-r1"></span>
+    <div id="round1-case-header" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
+  </nav>
+
+  <div class="screen-content">
+
+    <!-- AI Output sekcie A, B, C -->
+    <div id="round1-output"></div>
+
+    <!-- D – Quick Tipy -->
+    <div class="quick-tips-section">
+      <div class="quick-tips-header">
+        <span class="section-letter quick-tips-letter">D</span>
+        5 Quick Tipov na rýchly fix
+      </div>
+      <div id="quick-tips-container"></div>
+    </div>
+
+    <!-- E – Nové informácie -->
+    <div class="new-info-section">
+      <label for="tech-notes-input">E. Doplňujúce informácie od technika</label>
+      <textarea id="tech-notes-input" placeholder="Sem zadajte čo sa dozvedeli od používateľa, čo sa stalo po testoch, aké boli výsledky overenia..."></textarea>
+    </div>
+
+    <!-- Token / Cost bar -->
+    <div id="token-bar-r1"></div>
+
+    <!-- Tlačidlá -->
+    <div class="form-actions">
+      <button class="btn btn-primary btn-lg" id="btn-round2">🔄 Spracovať nové informácie</button>
+      <button class="btn btn-secondary" id="btn-close-case-r1">📋 Ukončiť CASE a vygenerovať KB</button>
+    </div>
+
+  </div>
+</div><!-- /screen-round1 -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: ROUND 2 – Deep Analysis
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-round2" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <button class="btn btn-ghost btn-sm btn-back" data-target="screen-round1">← Späť</button>
+    </div>
+    <span class="model-indicator" id="model-indicator-r2"></span>
+    <div id="round2-case-header" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"></div>
+  </nav>
+
+  <div class="screen-content">
+
+    <div id="round2-output"></div>
+
+    <!-- Token / Cost bar -->
+    <div id="token-bar-r2"></div>
+
+    <!-- 3 Akcie -->
+    <div class="form-actions" style="margin-top:24px;">
+      <button class="btn btn-success btn-lg" id="btn-close-case-r2">✅ Ukončiť CASE a vygenerovať KB</button>
+      <button class="btn btn-secondary" id="btn-handoff">🔗 Pokračovať vo vybranej AI službe</button>
+      <button class="btn btn-warning" id="btn-escalate">⬆️ Eskalovať case interne</button>
+    </div>
+
+  </div>
+</div><!-- /screen-round2 -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: CLOSE CASE
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-closecase" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <button class="btn btn-ghost btn-sm btn-back" data-target="screen-round2">← Späť</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-weight:700;">Uzatvoriť prípad</span>
+      <span class="case-id-badge" id="close-case-id"></span>
+    </div>
+  </nav>
+
+  <div class="screen-content">
+    <div class="close-form">
+
+      <div style="margin-bottom:20px;">
+        <label>Stav prípadu *</label>
+        <select id="close-status-select">
+          <option value="">-- Vyberte stav --</option>
+          <option value="resolved">✅ Vyriešené</option>
+          <option value="unresolved">❌ Nevyriešené</option>
+          <option value="escalated">⬆️ Eskalované</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label id="actual-fix-label">Čo reálne vyriešilo problém? *</label>
+        <textarea id="close-actual-fix" placeholder="Popíšte vlastnými slovami čo fungovalo..."></textarea>
+      </div>
+
+      <div style="margin-bottom:24px;">
+        <label>Finálna poznámka technika (voliteľné)</label>
+        <textarea id="close-final-note" placeholder="Akákoľvek doplňujúca poznámka alebo odporúčanie..."></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-success btn-lg" id="btn-confirm-close">💾 Uložiť a vygenerovať KB záznam</button>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /screen-closecase -->
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: SUMMARY
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-summary" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <div class="app-logo-icon">✅</div>
+      <div>
+        <div class="app-logo-text">KB Záznam vytvorený</div>
+        <div class="app-logo-sub">DigiEDU AI Service Assistant</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="screen-content">
+    <div id="summary-progress" class="progress-bar"><div class="progress-fill"></div></div>
+    <div id="summary-content"></div>
+    <div class="form-actions" style="margin-top:24px;justify-content:center;">
+      <button class="btn btn-primary btn-lg" id="btn-back-home">🏠 Späť na hlavnú stránku</button>
+    </div>
+  </div>
+</div><!-- /screen-summary -->
+
+
+
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: ADMIN (Úloha 4)
+     ══════════════════════════════════════════════════════ -->
+<div id="screen-admin" class="screen">
+  <nav class="app-navbar">
+    <div class="app-logo">
+      <button class="btn btn-ghost btn-sm" id="btn-admin-back">← Späť</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-weight:700;font-size:15px;">⚙️ Admin nastavenia</span>
+    </div>
+  </nav>
+
+  <div class="screen-content">
+    <div class="admin-grid">
+
+      <!-- Model -->
+      <div class="admin-section">
+        <h3>🤖 Aktívny model</h3>
+        <select id="admin-model-select">
+          <option value="haiku">Haiku ⚡ (lacnejší, rýchlejší)</option>
+          <option value="sonnet">Sonnet (kvalitnejší, drahší)</option>
+        </select>
+      </div>
+
+      <!-- Limity enabled -->
+      <div class="admin-section">
+        <h3>💰 Per-call limity</h3>
+        <label class="admin-toggle">
+          <input type="checkbox" id="admin-limits-enabled" checked>
+          <span>Zapnúť USD limity na každé volanie</span>
+        </label>
+      </div>
+
+      <!-- Per-call limity -->
+      <div class="admin-section">
+        <h3>📊 Max USD per volanie</h3>
+        <div class="admin-limits-grid">
+          <div class="admin-limit-row">
+            <label>Kolo 1 (prvá analýza)</label>
+            <div class="admin-input-wrap"><span>$</span><input type="number" id="admin-limit-r1" step="0.001" min="0.001" value="0.005"></div>
+          </div>
+          <div class="admin-limit-row">
+            <label>Kolo 2 (hlbšia analýza)</label>
+            <div class="admin-input-wrap"><span>$</span><input type="number" id="admin-limit-r2" step="0.001" min="0.001" value="0.008"></div>
+          </div>
+          <div class="admin-limit-row">
+            <label>Gramatická oprava</label>
+            <div class="admin-input-wrap"><span>$</span><input type="number" id="admin-limit-grammar" step="0.001" min="0.001" value="0.001"></div>
+          </div>
+          <div class="admin-limit-row">
+            <label>KB generovanie</label>
+            <div class="admin-input-wrap"><span>$</span><input type="number" id="admin-limit-kb" step="0.001" min="0.001" value="0.005"></div>
+          </div>
+          <div class="admin-limit-row">
+            <label>Web search</label>
+            <div class="admin-input-wrap"><span>$</span><input type="number" id="admin-limit-web" step="0.001" min="0.001" value="0.004"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KB/WEB pomer -->
+      <div class="admin-section">
+        <h3>📚 KB vs WEB pomer</h3>
+        <div id="admin-regime-label" class="admin-regime-badge">Načítavam...</div>
+        <div class="admin-limits-grid">
+          <div class="admin-limit-row">
+            <label>Discovery (&lt;30 zázn.) – KB váha</label>
+            <input type="number" id="admin-kb-min" step="0.05" min="0.1" max="1" value="0.60">
+          </div>
+          <div class="admin-limit-row">
+            <label>Stabilizing (30-100) – KB váha</label>
+            <input type="number" id="admin-kb-mid" step="0.05" min="0.1" max="1" value="0.75">
+          </div>
+          <div class="admin-limit-row">
+            <label>Saturated (100+) – KB váha</label>
+            <input type="number" id="admin-kb-max" step="0.05" min="0.1" max="1" value="0.90">
+          </div>
+        </div>
+      </div>
+
+      <!-- API kľúč -->
+      <div class="admin-section">
+        <h3>🔑 API kľúč</h3>
+        <input type="password" id="admin-api-key" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px;">
+      </div>
+
+      <!-- Cloud operácie -->
+      <div class="admin-section">
+        <h3>☁️ Cloud operácie</h3>
+        <div class="form-actions" style="margin-top:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary" id="btn-admin-sync">🔄 Manuálny Cloud Sync</button>
+          <button class="btn btn-secondary" id="btn-admin-export-kb">📥 Export MAIN_KB.json</button>
+        </div>
+        <p style="color:var(--text-dim);font-size:11px;margin-top:8px;">
+          Export MAIN_KB.json stiahne kompletný JSON ktorý môžete editovať a nahrať priamo na Drive.
+        </p>
+      </div>
+
+      <!-- Uložiť -->
+      <div class="form-actions" style="margin-top:24px;">
+        <button class="btn btn-primary btn-lg" id="btn-admin-save">💾 Uložiť nastavenia</button>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /screen-admin -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALY
+     ══════════════════════════════════════════════════════ -->
+
+<!-- Modal: Vyhľadávanie -->
+<div id="modal-search" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">🔍 Hľadať v Knowledge Base</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <input type="text" id="search-input" placeholder="Zadajte kľúčové slovo, zariadenie, tagy..." style="margin-bottom:12px;">
+    <div class="search-filters">
+      <select id="search-cat-filter">
+        <option value="">Všetky kategórie</option>
+        <option value="HW">HW</option>
+        <option value="365">365</option>
+        <option value="WIFI">WIFI</option>
+        <option value="ADMIN">ADMIN</option>
+        <option value="OTHER">OTHER</option>
+      </select>
+      <select id="search-status-filter">
+        <option value="">Všetky stavy</option>
+        <option value="resolved">Vyriešené</option>
+        <option value="unresolved">Nevyriešené</option>
+        <option value="escalated">Eskalované</option>
+      </select>
+      <label class="search-extra-toggle">
+        <input type="checkbox" id="search-extra-toggle"> EXTRA KB
+      </label>
+      <label class="search-extra-toggle">
+        <input type="checkbox" id="search-web-toggle"> 🌐 WEB KB
+      </label>
+    </div>
+    <div class="search-results-container">
+      <div id="search-results"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detail KB záznamu -->
+<div id="modal-kb-detail" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">📄 Detail KB záznamu</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <div id="kb-detail-body"></div>
+  </div>
+</div>
+
+<!-- Modal: Import KB (unified) -->
+<div id="modal-import" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">📥 Import Knowledge Base</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:14px;line-height:1.6;">
+      Importujte KB súbory. Systém automaticky rozpozná formát, kategóriu a vykoná deduplikáciu.
+      Podporované: hlavné KB, update súbory, EXTRA KB, WEB KB, aj kompletné zložky.
+    </p>
+    <label>Vyberte KB súbor(y) alebo celú zložku</label>
+    <input type="file" id="import-file-input" accept=".json,.jsonl,.txt" multiple
+      style="background:var(--bg-input);border:1px solid var(--border-strong);border-radius:8px;padding:10px;color:var(--text);margin-bottom:12px;cursor:pointer;">
+    <div id="import-result-stats" style="display:none;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#38bdf8;"></div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-import-confirm">📥 Importovať</button>
+      <button class="btn btn-ghost btn-modal-close">Zrušiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Export KB -->
+<div id="modal-export" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">💾 Export Knowledge Base</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label>Čo exportovať?</label>
+      <select id="export-scope-select" style="margin-bottom:12px;">
+        <option value="all">Všetky KB (kompletná záloha)</option>
+        <option value="HW">HW Knowledge Base</option>
+        <option value="365">365 Knowledge Base</option>
+        <option value="WIFI">WIFI Knowledge Base</option>
+        <option value="ADMIN">ADMIN Knowledge Base</option>
+        <option value="OTHER">OTHER Knowledge Base</option>
+        <option value="EXTRA">EXTRA Knowledge Base</option>
+        <option value="WEB">WEB Knowledge Base</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-export-confirm">💾 Exportovať</button>
+      <button class="btn btn-ghost btn-modal-close">Zrušiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Handoff -->
+<div id="modal-handoff" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">🔗 Handoff do externej AI služby</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:14px;">
+      História prípadu bola skopírovaná do schránky. Vyberte AI službu a vložte text.
+    </p>
+    <textarea id="handoff-text-preview" class="handoff-preview" readonly></textarea>
+    <div class="handoff-services">
+      <button class="btn btn-secondary handoff-service-btn" data-service="chatgpt">
+        🤖 ChatGPT
+      </button>
+      <button class="btn btn-secondary handoff-service-btn" data-service="claude">
+        ✨ Claude
+      </button>
+      <button class="btn btn-secondary handoff-service-btn" data-service="gemini">
+        🌟 Gemini
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Heslo -->
+<div id="modal-password" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">🔒 Zadajte heslo</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <label for="password-input">Heslo pre import</label>
+    <input type="password" id="password-input" placeholder="••••" style="margin-bottom:6px;">
+    <div id="password-error" class="password-error"></div>
+    <div class="form-actions" style="margin-top:14px;">
+      <button class="btn btn-primary" id="password-confirm-btn">✓ Potvrdiť</button>
+      <button class="btn btn-ghost btn-modal-close">Zrušiť</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Globálna Cost Bar (fixná, dole v strede) ────────────── -->
+<div id="global-cost-bar">
+  <div class="gcb-inner">
+    <span class="gcb-icon">💰</span>
+    <span class="gcb-label">Session: </span>
+    <span class="gcb-val gcb-cost">$0.0000</span>
+    <span class="gcb-sep">·</span>
+    <span class="gcb-label">0 volaní</span>
+    
+  </div>
+</div>
+
+<!-- ── Modal: Cost Settings ────────────────────────────────── -->
+<div id="modal-cost-settings" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">💰 Nastavenie limitu nákladov</div>
+      <button class="modal-close btn btn-ghost btn-sm">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="cost-settings-row">
+        <label class="cost-toggle-label">
+          <input type="checkbox" id="cost-limit-enabled" onchange="updateCostLimitInputState()">
+          <span>Zapnúť limit nákladov na každé volanie (AI aj web search)</span>
+        </label>
+      </div>
+      <div class="cost-settings-row">
+        <label for="cost-limit-value">Max. cena per jedno API volanie (USD):</label>
+        <div class="cost-input-row">
+          <span class="cost-dollar">$</span>
+          <input type="number" id="cost-limit-value" step="0.001" min="0.001" max="10" value="0.05"
+                 oninput="updateCostLimitInputState()" placeholder="0.05">
+          <span class="cost-unit">USD</span>
+        </div>
+      </div>
+      <div class="cost-presets">
+        <span class="cost-preset-label">Rýchle predvoľby:</span>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('cost-limit-value').value='0.01';updateCostLimitInputState()">$0.01</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('cost-limit-value').value='0.03';updateCostLimitInputState()">$0.03</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('cost-limit-value').value='0.05';updateCostLimitInputState()">$0.05</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('cost-limit-value').value='0.10';updateCostLimitInputState()">$0.10</button>
+        <button class="btn btn-sm btn-secondary" onclick="document.getElementById('cost-limit-value').value='0.25';updateCostLimitInputState()">$0.25</button>
+      </div>
+      <div id="cost-limit-info" class="cost-limit-info">Limit vypnutý – použijú sa plné nastavenia modelu.</div>
+      <div class="cost-model-info">
+        <strong>Aktuálny model:</strong> <span id="cost-modal-model">—</span><br>
+        <small id="cost-modal-prices">—</small>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveCostSettings()">💾 Uložiť</button>
+      <button class="btn btn-secondary btn-modal-close">Zavrieť</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal: Grammar Preview (Úloha 5) -->
+<div id="modal-grammar-preview" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box modal-wide">
+    <div class="modal-header">
+      <div class="modal-title">✍️ Gramatická oprava textu</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="color:var(--text-muted);font-size:13px;">Pôvodný text technika:</label>
+      <div id="grammar-original" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:8px;padding:12px;font-size:14px;color:var(--text-muted);margin-top:4px;"></div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="color:var(--text-muted);font-size:13px;">AI opravený text (môžete editovať):</label>
+      <textarea id="grammar-corrected" style="margin-top:4px;min-height:100px;border-color:rgba(16,185,129,0.3);"></textarea>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-success" id="grammar-accept">✅ Použiť opravený text</button>
+      <button class="btn btn-ghost" id="grammar-skip">Preskočiť (ponechať originál)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Admin heslo -->
+<div id="modal-admin-password" class="modal">
+  <div class="modal-overlay"></div>
+  <div class="modal-box" style="max-width:360px;">
+    <div class="modal-header">
+      <div class="modal-title">🔒 Admin heslo</div>
+      <button class="modal-close btn-modal-close">✕</button>
+    </div>
+    <label for="admin-password-input">Heslo pre Admin obrazovku</label>
+    <input type="password" id="admin-password-input" placeholder="••••" style="margin-bottom:6px;">
+    <div id="admin-password-error" class="password-error"></div>
+    <div class="form-actions" style="margin-top:14px;">
+      <button class="btn btn-primary" id="admin-password-confirm">✓ Potvrdiť</button>
+      <button class="btn btn-ghost btn-modal-close">Zrušiť</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scripts ────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="config.js"></script>
+<script src="devices.js"></script>
+<script src="db.js"></script>
+<script src="ai.js"></script>
+<script src="kb.js"></script>
+<script src="ui.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
