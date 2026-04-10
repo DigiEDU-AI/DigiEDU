@@ -354,71 +354,49 @@ function renderSearchResults(results, containerId = 'search-results') {
   if (!container) return;
 
   if (!results.length) {
-    container.innerHTML = '<div class="no-results">🔍 Žiadne výsledky. Skúste iný výraz alebo kategóriu.</div>';
+    container.innerHTML = '<div class="no-results">Žiadne výsledky</div>';
     return;
   }
 
-  const CAT_ICONS = { HW:'🖥️', '365':'☁️', WIFI:'📡', ADMIN:'📋', OTHER:'❓', WEB:'🌐', EXTRA:'🧠', BRAIN:'🧠' };
-
   container.innerHTML = results.map(e => {
-    const isWeb  = (e.category === 'WEB' || e._store === 'WEB');
-    const cat    = e.category || e._store || '?';
-    const icon   = CAT_ICONS[cat] || '📄';
-    const title  = e.title || e.problem_summary || e.query || (e.original_problem_text||'').slice(0, 100) || 'Bez názvu';
-    const solved = e.actual_fix || e.final_resolution || '';
-    const conf   = e.confidence_score ? `${Math.round(e.confidence_score * 100)}%` : '';
-    const prio   = e.priority || '';
-    const prioColor = { critical:'#ef4444', high:'#f59e0b', medium:'#3b82f6', low:'#6b7280' }[prio] || '#6b7280';
-    const id     = e.record_id || e.entry_id || '';
-    const tags   = (e.tags || []).slice(0, 4);
-    const faqCount = (e.faq_items || []).length;
+    const isWeb = e._store === 'WEB';
+    const title = isWeb
+      ? (e.query?.slice(0, 120) || e.content?.slice(0, 120) || 'Web cache záznam')
+      : (e.problem_summary || e.original_problem_text?.slice(0, 120) || '');
+    const catLabel = isWeb ? '🌐 WEB' : (e.category || '?');
+    const catClass = isWeb ? 'web' : (e.category?.toLowerCase() || '');
+    const statusHtml = isWeb
+      ? `<span class="result-status status-web">📦 Cache</span>`
+      : `<span class="result-status status-${e.status}">${statusLabel(e.status)}</span>`;
+    const deviceHtml = isWeb && e.device
+      ? `<div class="result-device">🖥️ ${escapeHtml(e.device)}</div>`
+      : (e.device_name ? `<div class="result-device">🖥️ ${escapeHtml(e.device_name)}</div>` : '');
+    const dateHtml = isWeb && e.created_at
+      ? `<div class="result-device" style="color:#64748b;font-size:11px;">📅 ${formatDate(e.created_at)}</div>`
+      : '';
 
     return `
-    <div class="search-result-card${isWeb ? ' web-entry' : ''}" data-id="${escapeHtml(id)}" data-store="${escapeHtml(cat)}" style="cursor:pointer;">
-      <div class="result-header" style="gap:6px;flex-wrap:wrap;">
-        <span class="result-id">${escapeHtml(id)}</span>
-        <span class="result-cat cat-${cat.toLowerCase()}">${icon} ${escapeHtml(cat)}</span>
-        <span class="result-status status-${e.status || 'raw'}">${statusLabel(e.status || 'raw')}</span>
-        ${prio ? `<span style="font-size:10px;font-weight:700;color:${prioColor};text-transform:uppercase;">${prio}</span>` : ''}
-        ${conf ? `<span style="font-size:10px;color:var(--text-dim);margin-left:auto;">✓ ${conf}</span>` : ''}
+    <div class="search-result-card${isWeb ? ' web-entry' : ''}" data-id="${escapeHtml(e.entry_id)}" data-store="${escapeHtml(e._store || e.category)}">
+      <div class="result-header">
+        <span class="result-id">${escapeHtml(e.entry_id)}</span>
+        <span class="result-cat cat-${catClass}">${catLabel}</span>
+        ${statusHtml}
       </div>
-
-      <div class="result-title" style="font-size:14px;font-weight:600;margin:6px 0 4px;">${escapeHtml(title)}</div>
-
-      ${e.device_name ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">🖥️ ${escapeHtml(e.device_name)}</div>` : ''}
-
-      ${solved ? `<div style="font-size:12px;color:#10b981;background:rgba(16,185,129,0.08);border-left:2px solid #10b981;padding:4px 8px;border-radius:4px;margin-bottom:6px;">✅ ${escapeHtml(solved.slice(0, 120))}${solved.length > 120 ? '…' : ''}</div>` : ''}
-
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <div class="result-tags" style="flex:1;">${tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>
-        ${faqCount ? `<span style="font-size:11px;color:var(--text-dim);">💬 ${faqCount} FAQ</span>` : ''}
-        ${formatDate(e.created_at) ? `<span style="font-size:11px;color:var(--text-dim);">${formatDate(e.created_at)}</span>` : ''}
-      </div>
+      <div class="result-title">${escapeHtml(title)}</div>
+      ${deviceHtml}${dateHtml}
+      <div class="result-tags">${(e.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>
     </div>`;
   }).join('');
 
+  // Event listeners pre otvorenie detailu
   container.querySelectorAll('.search-result-card').forEach(card => {
     card.addEventListener('click', () => showKBDetail(card.dataset.id, card.dataset.store));
   });
 }
 
 async function showKBDetail(entryId, store) {
-  // V Cloud-First architektúre sú záznamy v unified main_kb store
-  // getEntry() funguje priamo, dbGet() len ako fallback
-  let entry = null;
-  if (typeof getEntry === 'function') {
-    entry = await getEntry(entryId);
-  }
-  if (!entry && typeof dbGet === 'function') {
-    entry = await dbGet(store || 'main_kb', entryId);
-  }
-  if (!entry) {
-    // Posledný pokus – hľadaj vo všetkých known stores
-    for (const s of ['main_kb', 'HW', '365', 'WIFI', 'ADMIN', 'OTHER', 'WEB', 'EXTRA']) {
-      try { entry = await dbGet(s, entryId); if (entry) break; } catch {}
-    }
-  }
-  if (!entry) { showToast('Záznam nenájdený – skúste znovu', 'error'); return; }
+  const entry = await dbGet(store, entryId);
+  if (!entry) { showToast('Záznam nenájdený', 'error'); return; }
 
   const modal = document.getElementById('modal-kb-detail');
   const body  = document.getElementById('kb-detail-body');
@@ -585,66 +563,36 @@ async function loadRelatedRecords(entry) {
   if (!container) return;
 
   try {
-    // Použi unified findRelatedKBEntries ak dostupná
-    let related = [];
-    if (typeof findRelatedKBEntries === 'function') {
-      related = await findRelatedKBEntries(entry, 6);
-    } else {
-      // Fallback – manuálne hľadanie v known stores
-      const q = (entry.problem_summary || entry.title || '').toLowerCase();
-      const words = q.split(/\s+/).filter(w => w.length > 3);
-      const stores = ['HW','365','WIFI','ADMIN','OTHER'];
-      for (const s of stores) {
-        try {
-          const entries = await dbGetAll(s);
-          for (const e of entries) {
-            if (e.entry_id === entry.entry_id) continue;
-            const text = (e.problem_summary || e.title || '').toLowerCase();
-            const score = words.filter(w => text.includes(w)).length;
-            if (score >= 2) related.push({ ...e, _score: score });
-          }
-        } catch {}
-      }
-      related = related.sort((a,b) => b._score - a._score).slice(0, 6);
-    }
-
+    const related = await findRelatedKBEntries(entry, 5);
     if (!related.length) {
-      container.innerHTML = '<span style="color:var(--text-dim);">Žiadne podobné záznamy</span>';
+      container.innerHTML = '<span style="color:var(--text-muted);">Žiadne podobné záznamy</span>';
       return;
     }
 
-    const CAT_ICONS = { HW:'🖥️', '365':'☁️', WIFI:'📡', ADMIN:'📋', OTHER:'❓', WEB:'🌐', EXTRA:'🧠' };
-
     container.innerHTML = related.map(r => {
-      const cat  = r.category || r.kb_set || '?';
-      const icon = CAT_ICONS[cat] || '📄';
-      const rid  = r.record_id || r.entry_id;
-      const title = r.title || r.problem_summary || rid;
-      const solved = r.actual_fix || r.final_resolution || '';
+      const catClass = (r.kb_set || r.category || '').toLowerCase();
+      const displayStatus = r.case_status || r.status;
       return `
-        <div class="related-record-card" data-id="${escapeHtml(rid)}" data-store="${escapeHtml(cat)}" style="cursor:pointer;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;transition:border-color 0.2s;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="font-size:11px;color:var(--text-dim);">${escapeHtml(rid)}</span>
-            <span style="font-size:11px;font-weight:700;">${icon} ${escapeHtml(cat)}</span>
-            ${r.priority ? `<span style="font-size:10px;color:var(--text-dim);text-transform:uppercase;">${r.priority}</span>` : ''}
-          </div>
-          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;">${escapeHtml(title.slice(0, 100))}${title.length > 100 ? '…' : ''}</div>
-          ${solved ? `<div style="font-size:11px;color:#10b981;">✅ ${escapeHtml(solved.slice(0, 80))}${solved.length > 80 ? '…' : ''}</div>` : ''}
-          <div style="margin-top:5px;">${(r.tags || []).slice(0, 3).map(t => `<span class="tag" style="font-size:10px;">${escapeHtml(t)}</span>`).join('')}</div>
+        <div class="related-record-card" data-id="${escapeHtml(r.entry_id)}" data-store="${escapeHtml(r._store)}">
+          <span class="result-id" style="font-size:11px;">${escapeHtml(r.entry_id)}</span>
+          <span class="result-cat cat-${catClass}" style="font-size:11px;">${escapeHtml(r.kb_set || r.category)}</span>
+          <span class="result-status status-${displayStatus}" style="font-size:11px;">${statusLabel(displayStatus)}</span>
+          <div style="font-size:13px;margin-top:4px;">${escapeHtml(r.title || r.problem_summary || r.original_problem_text?.slice(0,100) || '—')}</div>
+          ${r.device_name ? `<div style="font-size:11px;color:var(--text-muted);">🖥️ ${escapeHtml(r.device_name)}</div>` : ''}
         </div>`;
     }).join('');
 
-    // Klik na related → otvor detail
+    // Click handler → otvor detail súvisiaceho záznamu
     container.querySelectorAll('.related-record-card').forEach(card => {
-      card.addEventListener('mouseenter', () => card.style.borderColor = 'var(--border-strong)');
-      card.addEventListener('mouseleave', () => card.style.borderColor = 'var(--border)');
-      card.addEventListener('click', () => showKBDetail(card.dataset.id, card.dataset.store));
+      card.addEventListener('click', () => {
+        showKBDetail(card.dataset.id, card.dataset.store);
+      });
     });
-
   } catch (err) {
-    container.innerHTML = `<span style="color:var(--text-dim);">Chyba načítania: ${escapeHtml(err.message)}</span>`;
+    container.innerHTML = '<span style="color:var(--text-muted);">Chyba pri hľadaní</span>';
   }
 }
+
 // ── Counter badges update ─────────────────────────────────────
 
 async function updateHomeCounters() {
@@ -821,16 +769,4 @@ function saveCostSettings() {
     ? '💰 Per-call limity aktívne'
     : '💰 Limity vypnuté – plný výkon';
   showToast(msg, 'success', 4000);
-}
-
-// ── Oprava: updateWebKBCounter pre Cloud-First ─────────────────
-async function updateWebKBCounter() {
-  try {
-    const webCount = typeof getWebKBCount === 'function' ? await getWebKBCount() : 0;
-    const webEl    = document.getElementById('counter-web-kb');
-    if (webEl) {
-      webEl.innerHTML     = `🌐 ${webCount} WEB záznamov`;
-      webEl.style.display = webCount > 0 ? 'block' : 'none';
-    }
-  } catch {}
 }
