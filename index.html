@@ -25,13 +25,13 @@
   <!-- Navbar -->
   <nav class="app-navbar">
     <div class="app-logo">
-      <div class="app-logo-icon">🤖<span id="cloud-sync-dot" class="cloud-sync-dot offline" title="Offline"></span></div>
+      <div class="app-logo-icon">🤖</div>
       <div>
         <div class="app-logo-text">DigiEDU AI</div>
         <div class="app-logo-sub">Service Assistant</div>
       </div>
     </div>
-    <div class="nav-actions"><span id="pending-sync-badge" class="pending-badge" style="display:none"></span><button class="btn btn-ghost btn-sm" id="btn-manual-sync" title="Manuálny cloud sync">🔄</button>
+    <div class="nav-actions">
       <div class="model-switcher">
         <button class="model-btn" data-model="sonnet" onclick="setModel('sonnet',this)">Sonnet</button>
         <button class="model-btn active" data-model="haiku" onclick="setModel('haiku',this)">Haiku ⚡</button>
@@ -107,7 +107,8 @@
   <!-- Bottom actions -->
   <div class="home-bottom-actions">
     <button class="btn btn-secondary" id="btn-import-kb">📥 Import KB</button>
-    <button class="btn btn-secondary" id="btn-export-kb">💾 Záloha ZIP</button>
+    <button class="btn btn-secondary" id="btn-export-kb">💾 Export KB</button>
+    <button class="btn btn-secondary" id="btn-export-manual">📖 Export KB Manuál</button>
     <button class="btn btn-ghost" id="btn-admin" style="margin-left:auto;">⚙️ Admin</button>
   </div>
 </div><!-- /screen-home -->
@@ -391,18 +392,6 @@
         <input type="password" id="admin-api-key" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:12px;">
       </div>
 
-      <!-- Cloud operácie -->
-      <div class="admin-section">
-        <h3>☁️ Cloud operácie</h3>
-        <div class="form-actions" style="margin-top:8px;flex-wrap:wrap;">
-          <button class="btn btn-secondary" id="btn-admin-sync">🔄 Manuálny Cloud Sync</button>
-          <button class="btn btn-secondary" id="btn-admin-export-kb">📥 Export MAIN_KB.json</button>
-        </div>
-        <p style="color:var(--text-dim);font-size:11px;margin-top:8px;">
-          Export MAIN_KB.json stiahne kompletný JSON ktorý môžete editovať a nahrať priamo na Drive.
-        </p>
-      </div>
-
       <!-- Uložiť -->
       <div class="form-actions" style="margin-top:24px;">
         <button class="btn btn-primary btn-lg" id="btn-admin-save">💾 Uložiť nastavenia</button>
@@ -569,7 +558,6 @@
     <span class="gcb-val gcb-cost">$0.0000</span>
     <span class="gcb-sep">·</span>
     <span class="gcb-label">0 volaní</span>
-    
   </div>
 </div>
 
